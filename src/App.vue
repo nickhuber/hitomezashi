@@ -1,15 +1,15 @@
 <template>
-  <img alt="Vue logo" src="./assets/logo.png">
-  <HelloWorld msg="Welcome to Your Vue.js App"/>
+  <Hitomezashi />
+  <p>Inspired by this video from Numberphile</p><iframe width="560" height="315" src="https://www.youtube.com/embed/JbfhzlMk2eY" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
 </template>
 
 <script>
-import HelloWorld from './components/HelloWorld.vue'
+import Hitomezashi from './components/Hitomezashi.vue'
 
 export default {
   name: 'App',
   components: {
-    HelloWorld
+    Hitomezashi
   }
 }
 </script>
