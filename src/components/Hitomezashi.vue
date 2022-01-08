@@ -6,7 +6,10 @@
 <div class="row">
   <div class="col"></div>
   <div class="col-auto">
-    The pattern is generated based on the shortest phrase
+    Every second character is used for either the X or Y axis, only alphanumeric and
+    space characters are considered. Vowels, even numbers and space characters
+    means you start with a stitch on, otherwise you start with a stitch off in that
+    position.
   </div>
   <div class="col"></div>
 </div>
@@ -14,36 +17,47 @@
 <div class="row">
   <div class="col"></div>
 
-  <div class="col-auto">
-    <label for="phrase1" class="visually-hidden">Phrase 1</label>
-    <input type="text" class="form-control" id="phrase1" v-model="phrase1" placeholder="Some inspiring phrase">
+  <div class="col-md">
+    <label for="phrase" class="visually-hidden">Phrase</label>
+    <input type="text" class="form-control" id="phrase" v-model="phrase" placeholder="Some inspiring phrase">
   </div>
   <div class="col-auto">
-    <label for="phrase2" class="visually-hidden">Phrase 2</label>
-    <input type="text" class="form-control" id="phrase2" v-model="phrase2" placeholder="Some inspiring phrase">
-  </div>
-  <div class="col-auto">
-    <button type="button" class="btn btn-primary mb-3" @click="generatePhrases()">Give me some phrases</button>
+    <button type="button" class="btn btn-primary mb-3" @click="generatePhrase()">Give me a phrase</button>
   </div>
 
   <div class="col"></div>
 </div>
 
-
-  <div class="row">
-    <div class="col-auto">
-      <div class="hito-scene">
-        <div v-for="(line, index) in stitches" :key="index">
+<div class="row">
+  <div class="col-auto">
+    <div class="hito-scene">
+      <div v-for="(line, index) in stitches" :key="line">
+        <div v-if="index == 0">
+          <div class="hito-cell hito-x-stitch-off hito-y-stitch-off">
+            <div class="hito-cell-label">&nbsp;</div>
+          </div> <!-- Empty cell to line up with the next set of labels-->
+          <div class="hito-cell hito-x-stitch-off hito-y-stitch-off" v-for="thing in x" :key="thing">
+            <div class="hito-cell-label">{{ thing }}</div>
+          </div>
+        </div>
+        <template
+          v-for="(cell, cell_index) in line"
+          :key="cell"
+        >
+          <template v-if="cell_index == 0">
+            <div class="hito-cell hito-x-stitch-off hito-y-stitch-off">
+              <div class="hito-cell-label">{{ y[index] }}</div>
+            </div>
+          </template>
           <div
-            v-for="cell in line"
-            :key="cell"
             class="hito-cell"
             :class="{ 'hito-x-stitch-on': cell[0], 'hito-x-stitch-off': !cell[0], 'hito-y-stitch-on': cell[1], 'hito-y-stitch-off': !cell[1] }"
           />
-        </div>
+        </template>
       </div>
     </div>
   </div>
+</div>
 </div>
 </template>
 
@@ -78,60 +92,64 @@ function isEven(x) {
   return y % 2 === 0
 }
 
+function shouldStitch(x) {
+  return isVowel(x) || isEven(x) || x == ' '
+}
+
 function sanitizePhrase(phrase) {
-  return phrase.replace(/[^a-zA-Z0-9]/gi, '');
+  phrase = phrase.replace(/[^a-zA-Z0-9 ]/gi, '');
+  return phrase.replace(/[ ]/gi, '\xa0');
 }
 
 export default {
   name: 'Hitomezashi',
   data () {
     return {
-      phrase1: "",
-      phrase2: "",
+      phrase: "",
       stitches: [],
+      x: [],
+      y: [],
     }
   },
   watch: {
-    phrase1: _.debounce(function() {
+    phrase: _.debounce(function() {
       this.calculateStitches();
-    }, 100),
-    phrase2: _.debounce(function() {
-      this.calculateStitches();
-    }, 100)
+    }, 10),
   },
   created() {
-    this.generatePhrases()
+    this.generatePhrase()
   },
   methods: {
     calculateStitches() {
       let stitches = [];
-      const phrase1 = sanitizePhrase(this.phrase1);
-      const phrase2 = sanitizePhrase(this.phrase2);
-      const length = Math.min(phrase1.length, phrase2.length);
+      const sanitized = sanitizePhrase(this.phrase);
+      const length = Math.floor(sanitized.length / 2);
+      let p1 = [];
+      let p2 = [];
+      for (let i = 0; i < length * 2; i++) {
+        if (i % 2 == 0) {
+          p1.push(sanitized[i])
+        } else {
+          p2.push(sanitized[i])
+        }
+      }
       for (let x = 0; x < length; x++) {
         stitches.push([]);
-        const c1 = phrase1[x];
-        const a = isVowel(c1) || isEven(c1);
+        const c1 = p1[x];
+        const a = shouldStitch(c1);
         for (let y = 0; y < length; y++) {
-          const c2 = phrase2[y];
-          const b = isVowel(c2) || isEven(c2);
+          const c2 = p2[y];
+          const b = shouldStitch(c2);
           stitches[x].push([y % 2 == 0 ? a : !a, x % 2 == 0 ? b : !b])
         }
       }
       this.stitches = stitches;
+      this.y = p1;
+      this.x = p2;
     },
-    generatePhrases() {
-      const first = Math.floor(Math.random() * example_phrases.length);
-      let second;
-      for (;;) {
-        second = Math.floor(Math.random() * example_phrases.length);
-        if (second != first) {
-          break;
-        }
-      }
-      this.phrase1 = example_phrases[first];
-      this.phrase2 = example_phrases[second];
-
+    generatePhrase() {
+      const idx = Math.floor(Math.random() * example_phrases.length);
+      this.phrase = example_phrases[idx];
       this.calculateStitches();
     }
   }
@@ -163,11 +181,19 @@ export default {
 
 .hito-cell {
   display: inline-block;
-  padding: 0 !important;
-  margin: 0 !important;
+  padding: 0;
+  margin: 0;
   aspect-ratio: 1;
   width: 30px;
   height: 30px;
+  overflow-y: hidden;
+}
+
+.hito-cell-label {
+   position: relative;
+   top: 50%;
+   font-weight: bold;
+   text-align: center;
 }
 
 </style>
